@@ -7,7 +7,7 @@
 #include "core_functions.hpp"
 using namespace std;
 
-const string USERNAME = "PLACE USERNAME HERE";
+const string USERNAME = "Henry";
 
 int main(int argc, char *argv[])
 {
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
   }
 
   fin.close();
-  setenv("username", usernameFromFile, 1);
+   _putenv_s("username", usernameFromFile);
 
   if (argc > 1)
   {
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
   }
 
   bool validUser = verifyUser(username);
-  setenv("username", &USERNAME[0], 1);
+   _putenv_s("username", &USERNAME[0]);
   validUser = validUser && verifyUser(username);
 
   if (validUser)
