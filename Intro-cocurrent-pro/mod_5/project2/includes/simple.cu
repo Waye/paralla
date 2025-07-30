@@ -35,7 +35,7 @@ __global__ void vectorMult(const float *A, const float *B, float *C, int numElem
     }
 }
 
-float deviceMultiply(float a, float b)
+__device__ float deviceMultiply(float a, float b)
 {
     return a * b;
 }
@@ -67,10 +67,10 @@ __host__ std::tuple<float *, float *, float *> allocateHostMemory(int numElement
         h_B[i] = rand()/(float)RAND_MAX;
     }
 
-    return {h_A, h_B, h_C};
+    return std::make_tuple(h_A, h_B, h_C);
 }
 
-__device__ std::tuple<float *, float *, float *> allocateDeviceMemory(int numElements)
+std::tuple<float *, float *, float *> allocateDeviceMemory(int numElements)
 {
     // Allocate the device input vector A
     float *d_A = NULL;
@@ -99,10 +99,10 @@ __device__ std::tuple<float *, float *, float *> allocateDeviceMemory(int numEle
         fprintf(stderr, "Failed to allocate device vector C (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    return {d_A, d_B, d_C};
+    return std::make_tuple(d_A, d_B, d_C);
 }
 
-__global__ void copyFromHostToDevice(float *h_A, float *h_B, float *d_A, float *d_B, int numElements)
+void copyFromHostToDevice(float *h_A, float *h_B, float *d_A, float *d_B, int numElements)
 {
     size_t size = numElements * sizeof(float);
     // Copy the host input vectors A and B in host memory to the device input vectors in device memory
@@ -122,20 +122,28 @@ __global__ void copyFromHostToDevice(float *h_A, float *h_B, float *d_A, float *
     }
 }
 
-__device__ void executeKernel(float *d_A, float *d_B, float *d_C, int numElements)
+void executeKernel(float *d_A, float *d_B, float *d_C, int numElements)
 {
     // Launch the Vector Add CUDA Kernel
     int threadsPerBlock = 256;
     int blocksPerGrid =(numElements + threadsPerBlock - 1) / threadsPerBlock;
     printf("CUDA kernel launch with %d blocks of %d threads\n", blocksPerGrid, threadsPerBlock);
 
-    // REPLACE x, y, z with a, b, and c variables for memory on the GPU
-    REPLACE_KERNEL<<<number of blocks in a grid, replace with the number of threads in a block>>>(x, y, z, numElements);
+    // Launch the vectorMult kernel with proper parameters
+    vectorMult<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, d_C, numElements);
     cudaError_t err = cudaGetLastError();
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to launch vectorAdd kernel (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Failed to launch vectorMult kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+    
+    // Wait for the kernel to complete
+    err = cudaDeviceSynchronize();
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to synchronize kernel execution (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 }
@@ -156,7 +164,7 @@ __host__ void copyFromDeviceToHost(float *d_C, float *h_C, int numElements)
 }
 
 // Free device global memory
-__device__ void deallocateMemory(float *h_A, float *h_B, float *h_C, float *d_A, float *d_B, float *d_C)
+void deallocateMemory(float *h_A, float *h_B, float *h_C, float *d_A, float *d_B, float *d_C)
 {
     // Error code to check return values for CUDA calls
     cudaError_t err = cudaFree(d_A);
@@ -187,7 +195,7 @@ __device__ void deallocateMemory(float *h_A, float *h_B, float *h_C, float *d_A,
 }
 
 // Reset the device and exit
-__global__ void cleanUpDevice()
+void cleanUpDevice()
 {
     // cudaDeviceReset causes the driver to clean up all state. While
     // not mandatory in normal operation, it is good practice.  It is also
@@ -203,7 +211,7 @@ __global__ void cleanUpDevice()
     }
 }
 
-__device__ void performTest(float *h_A, float *h_B, float *h_C, int numElements)
+void performTest(float *h_A, float *h_B, float *h_C, int numElements)
 {
     // Verify that the result vector is correct
     for (int i = 0; i < numElements; ++i)
