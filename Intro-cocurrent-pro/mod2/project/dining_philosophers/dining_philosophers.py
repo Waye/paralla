@@ -28,6 +28,8 @@ class Philosopher(threading.Thread):
         while self.running:
             #  Philosopher is thinking (but really is sleeping).
             time.sleep(random.uniform(3, 13))
+            if not self.running:  # Check if we should stop before trying to eat
+                break
             print(f'{self.name} is hungry.')
             self.dine()
 
@@ -36,10 +38,15 @@ class Philosopher(threading.Thread):
 
         while self.running:
             fork1.acquire(True)
+            if not self.running:  # Check if we should stop while holding a fork
+                fork1.release()
+                return
             locked = fork2.acquire(False)
             if locked:
                 break
             fork1.release()
+            if not self.running:  # Check if we should stop after releasing fork
+                return
             print(f'{self.name} swaps forks')
             fork1, fork2 = fork2, fork1
         else:
@@ -66,9 +73,20 @@ def dining_philosophers():
     Philosopher.running = True
     for p in philosophers:
         p.start()
+    
+    # Let the philosophers dine for 100 seconds
     time.sleep(100)
+    
+    # Signal all philosophers to stop
     Philosopher.running = False
     print("Now we're finishing.")
+    
+    # Wait for all philosopher threads to complete
+    for p in philosophers:
+        p.join()
+    
+    print("All philosophers have finished.")
 
 
-dining_philosophers()
+if __name__ == "__main__":
+    dining_philosophers()
