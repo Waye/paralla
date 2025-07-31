@@ -24,7 +24,9 @@ __global__ void search(int *d_d, int *d_i, int numElements)
         int inputVal = d_d[i];
         if(inputVal == d_v)
         {
-            d_i[0] = i;
+            // Use atomic operation to ensure only the first thread that finds
+            // the value gets to write the index
+            atomicMin(d_i, i);
         }
     }
 }
