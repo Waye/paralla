@@ -1,0 +1,8 @@
+CUDA Image Processing Results
+=============================
+GPU: NVIDIA GeForce RTX 5070 Laptop GPU
+Images processed: 3
+Operations: sharpen, blur, edge detection, brightness
+
+Output files are in PGM format.
+View with: IrfanView, GIMP, ImageMagick, or any PGM viewer.
